@@ -1,11 +1,11 @@
-Redis Powered DNS Server in golang
+# Redis Powered DNS Server in golang
 
 This is a DNS server that uses Redis as the backend. Redis
 records are stored according to the fqdn (with trailing dot)
 as the key, and a JSON payload as the value.
 
 
-JSON Payload:
+## JSON Payload:
 ```
 
 {"id":27469,
@@ -21,18 +21,31 @@ JSON Payload:
 Wildcard records, eg. www.as-12345.ascreen.co are supported,
 Redis is key for wildcards is *.as-12345.ascreen.co
 
-Usage:
+## Usage:
 ```
 ./redis-dns-server --domain ascreen.co --redis-server-url redis://127.0.0.1:6379 --port 5300
 
 53 is the standard port, ports less than 1024 require root privileges.
 ```
 
-Inspiration:
+## Inspiration:
 
 https://github.com/ConradIrwin/aws-name-server
+
 https://github.com/miekg/dns
 
-TODO:
+## TODO:
 Use valid_until to calculate the TTL
 
+## Cross Compiling
+
+http://stackoverflow.com/questions/12168873/cross-compile-go-on-osx
+
+```
+cd /usr/local/go/src
+sudo GOOS=linux GOARCH=386 CGO_ENABLED=0 ./make.bash --no-clean
+```
+
+```
+GOOS=linux GOARCH=386 CGO_ENABLED=0 go build -o redis-dns-server.linux
+```
