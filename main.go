@@ -1,4 +1,5 @@
 package main
+
 import (
 	"flag"
 	"fmt"
@@ -7,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/hoisie/redis"
 	"github.com/elcuervo/redisurl"
+	"github.com/hoisie/redis"
 )
 
 const USAGE = `Usage: redis-dns-server --domain <domain>
@@ -16,6 +17,7 @@ const USAGE = `Usage: redis-dns-server --domain <domain>
                     [ 
                     --port <port>
                     --hostname <hostname>
+                    --mbox <domainemailaddress>
                     ]
 
 The dns-server needs permission to bind to given port, default is 53.
@@ -28,6 +30,8 @@ func main() {
 	hostname := flag.String("hostname", "", "Public hostname of *this* server")
 	port := flag.Int("port", 53, "Port")
 	help := flag.Bool("help", false, "Get help")
+	emailAddr := "admin@" + *domain
+	mbox := flag.String("mbox", emailAddr, "Domain Admin Email Address")
 
 	flag.Parse()
 
@@ -37,17 +41,17 @@ func main() {
 	} else if *redisServerURLStr == "" {
 		fmt.Println(USAGE)
 		log.Fatalf("missing required parameter: --redis-server-url")
-  } else if *help {
+	} else if *help {
 		fmt.Println(USAGE)
 		os.Exit(0)
-  }
+	}
 
 	if *hostname == "" {
 		*hostname, _ = os.Hostname()
 	}
 
 	redisClient := RedisClient(*redisServerURLStr)
-	server := NewRedisDNSServer(*domain, *hostname, redisClient)
+	server := NewRedisDNSServer(*domain, *hostname, redisClient, *mbox)
 	port_str := fmt.Sprintf(":%d", *port)
 	log.Printf("Serving DNS records for *.%s from %s port %s", server.domain,
 		server.hostname, port_str)
@@ -64,6 +68,7 @@ func RedisClient(urlStr string) redis.Client {
 	address := fmt.Sprintf("%s:%d", url.Host, url.Port)
 	client.Addr = address
 	client.Db = url.Database
+	log.Printf("Redis DB is %d", url.Database)
 	client.Password = url.Password
 
 	return client
@@ -77,7 +82,7 @@ func checkNSRecordMatches(domain, hostname string) {
 		log.Printf("No working NS records found for %s", domain)
 	}
 
-	matched := false	
+	matched := false
 	if len(results) > 0 {
 		for _, record := range results {
 			if record.Host == hostname {
