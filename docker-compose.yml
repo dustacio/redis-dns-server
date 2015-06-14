@@ -1,0 +1,9 @@
+redisdnsserver:
+  build: .
+  env_file: docker-compose.env
+  links:
+    - redis:db
+  ports:
+    - "5300:53"
+redis:
+  image: redis:latest

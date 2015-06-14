@@ -1,45 +1,63 @@
-# Redis Powered DNS Server in golang
+# Redis Powered DNS Server in GoLang
 
-This is a DNS server that uses Redis as the backend. Redis
-records are stored according to the fqdn (with trailing dot)
-as the key, and a JSON payload as the value.
-
+This is a DNS server that uses Redis as the backend. Redis records are stored 
+according to the FQDN (with trailing dot) as the key, and a JSON payload as 
+the value.
 
 ## JSON Payload:
+
+```json
+{
+    "id": 27469,
+    "cname": "as-12345.ascreen.co.",
+    "fqdn": "as-12345.ascreen.co.",
+    "public_ip": "104.0.0.1",
+    "private_ip": "10.10.10.1",
+    "valid_until": "2015-12-12T03:53:26.150Z"
+}
 ```
 
-{"id":27469,
- "cname":"as-12345.ascreen.co.",
- "fqdn":"as-12345.ascreen.co.",
- "public_ip":"104.0.0.1",
- "private_ip":"10.10.10.1",
- "valid_until":"2015-12-12T03:53:26.150Z"
- }
-
-```
-
-Wildcard records, eg. www.as-12345.ascreen.co are supported,
-Redis is key for wildcards is *.as-12345.ascreen.co
+Wildcard records, eg. `www.subdomain.example.com` are supported.  The Redis 
+key for wildcards is `*.subdomain.example.com`.
 
 ## Usage:
+
 ```
-./redis-dns-server --domain ascreen.co --redis-server-url redis://127.0.0.1:6379 --port 5300
-
-53 is the standard port, ports less than 1024 require root privileges.
+./redis-dns-server \
+    --domain ascreen.co \
+    --redis-server-url redis://127.0.0.1:6379 \
+    --port 5300
 ```
 
-## Inspiration:
+Port `53` is the standard port.  Using a port less than `1024` will require 
+root privileges.
 
-https://github.com/ConradIrwin/aws-name-server
 
-https://github.com/miekg/dns
+## Development
 
-## TODO:
-Use valid_until to calculate the TTL
+### Building
 
-## Cross Compiling
+General build steps:
 
-http://stackoverflow.com/questions/12168873/cross-compile-go-on-osx
+```
+$ export GOPATH=/go/src/
+
+$ go get github.com/miekg/dns
+
+$ go get github.com/elcuervo/redisurl
+
+$ go get github.com/hoisie/redis
+
+$ go build -o redis-dns-server redis_dns_server.go main.go
+
+$ ./redis-dns-server --help
+```
+
+### Cross Compiling
+
+Reference:
+
+ * http://stackoverflow.com/questions/12168873/cross-compile-go-on-osx
 
 ```
 cd /usr/local/go/src
@@ -49,3 +67,108 @@ sudo GOOS=linux GOARCH=386 CGO_ENABLED=0 ./make.bash --no-clean
 ```
 GOOS=linux GOARCH=386 CGO_ENABLED=0 go build -o redis-dns-server.linux
 ```
+
+### Using Vagrant
+
+A simple `Vagrantfile` is provided to quickly spin up an Ubuntu 14.04 LTS box,
+that already has GoLang installed, as well as the latest version of Docker, 
+and Docker Compose.
+
+```
+$ vagrant up
+
+$ vagrant ssh
+```
+
+Inside Vagrant, the current working project directory will be accessible at
+`/vagrant`.
+
+
+### Using Docker and Docker Compose
+
+Either from your local machine running Docker, or from within the Vagrant box:
+
+```
+$ cp -a docker-compose.env.example docker-compose.env
+
+$ docker-compose up
+```
+
+To rebuild the image manually:
+
+```
+$ docker-compose build
+```
+
+
+## Deployment
+
+### Docker
+
+Reference the above Development section for using Docker Compose.  
+Alternatively, Redis DNS Server can be deployed with Docker in the following
+fashion.
+
+#### Building
+
+```
+$ docker build -t 'redis-dns-server:latest' .
+```
+
+#### Linking With a Redis Container
+
+```
+$ docker run -tid --name redis redis
+
+$ docker run -itd \
+    -e DOMAIN="example.com" \
+    -e HOSTNAME="myhostname.example.com" \
+    --link redis:db \
+    -p 53:53 \
+    redis-dns-server:latest
+```
+
+#### Linking With an External Redis Server
+
+```
+$ docker run -itd \
+    -e DOMAIN="example.com" \
+    -e HOSTNAME="myhostname.example.com" \
+    -e REDIS_HOST="redis.example.com" \
+    -p 53:53 \
+    redis-dns-server:latest
+```
+
+#### Using an Environment File
+
+You can load all `ENV` variables from an `ENV` file.  An example `ENV` file 
+can be found at `docker-compose.env.example`, and looks something like:
+
+```
+REDIS_HOST=redis.example.com
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_USERNAME=myuser
+REDIS_PASSWORD=mypassword
+DOMAIN=example.com
+DOMAIN_EMAIL=admin@example.com
+HOSTNAME=myhostname.example.com
+```
+
+Using it:
+
+```
+$ docker run -itd \
+    --env-file /path/to/myenv.file \
+    -p 53:53 \
+    redis-dns-server:latest
+```
+
+## Inspiration:
+
+ * https://github.com/ConradIrwin/aws-name-server
+ * https://github.com/miekg/dns
+
+## TODO List:
+
+ * Use valid_until to calculate the TTL
