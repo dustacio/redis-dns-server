@@ -9,22 +9,22 @@ the value.
 ```json
 {
     "id": 27469,
-    "cname": "as-12345.ascreen.co.",
-    "fqdn": "as-12345.ascreen.co.",
+    "cname": "foo-12345.example.com.",
+    "fqdn": "foo-12345.example.com.",
     "public_ip": "104.0.0.1",
     "private_ip": "10.10.10.1",
     "valid_until": "2015-12-12T03:53:26.150Z"
 }
 ```
 
-Wildcard records, eg. `www.subdomain.example.com` are supported.  The Redis 
-key for wildcards is `*.subdomain.example.com`.
+Wildcard records, eg. `www.foo-12345.example.com` are supported.  The Redis 
+key for wildcards is `*.foo-12345.example.com`.
 
 ## Usage:
 
 ```
 ./redis-dns-server \
-    --domain ascreen.co \
+    --domain example.com \
     --redis-server-url redis://127.0.0.1:6379 \
     --port 5300
 ```
