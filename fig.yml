@@ -1,8 +1,0 @@
-redis-dns-server:
-  build: .
-  links:
-   - redis
-  ports:
-   - "5353:53"
-redis:
-  image: redis:latest

@@ -9,7 +9,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "ubuntu-14.04-amd64"
   config.vm.network "private_network", type: :dhcp, auto_config: true
   config.vm.provision "shell" do |s|
-    s.inline = "cd /vagrant && bash scripts/vagrant.up.sh"
+    s.inline = "cd /vagrant && bash scripts/vagrant-up.sh"
   end
 
   config.vm.provider "virtualbox" do |v|

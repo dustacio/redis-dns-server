@@ -1,2 +1,4 @@
 redis-dns-server
 redis-dns-server.linux
+docker-compose.env
+.vagrant/
