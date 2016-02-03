@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/hoisie/redis"
 	"github.com/miekg/dns"
 	"log"
@@ -111,7 +112,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 		})
 	} else if msg.Qtype == dns.TypeMX {
 		fmt.Println("MX request")
-		answers = append(answers, &dns.A{
+		answers = append(answers, &dns.MX{
 			Hdr:        dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeMX, Class: dns.ClassINET, Ttl: ttl},
 			Preference: 10,
 			Mx:         record.CName,
