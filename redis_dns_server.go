@@ -94,23 +94,30 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 	ttl := TTL
 
 	if msg.Qtype == dns.TypeCNAME {
+		fmt.Println("CNAME request")
 		answers = append(answers, &dns.CNAME{
 			Hdr:    dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: ttl},
 			Target: record.CName,
 		})
 	} else if msg.Qtype == dns.TypeA {
+		fmt.Println("A request")
+		addr := record.PublicIP
 		if record.PublicIP != nil {
-
-			answers = append(answers, &dns.A{
-				Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
-				A:   record.PublicIP,
-			})
-		} else {
-			answers = append(answers, &dns.A{
-				Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
-				A:   record.PrivateIP,
-			})
+			addr = record.PrivateIP
 		}
+		answers = append(answers, &dns.A{
+			Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
+			A:   addr,
+		})
+	} else if msg.Qtype == dns.TypeMX {
+		fmt.Println("MX request")
+		answers = append(answers, &dns.A{
+			Hdr:        dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeMX, Class: dns.ClassINET, Ttl: ttl},
+			Preference: 10,
+			Mx:         record.CName,
+		})
+	} else {
+		fmt.Printf("Recieved a request for unknow record type: %d\n", msg.Qtype)
 	}
 	return answers
 }
