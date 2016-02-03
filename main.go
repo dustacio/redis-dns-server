@@ -14,7 +14,7 @@ import (
 
 const USAGE = `Usage: redis-dns-server --domain <domain>
                     --redis-server-url <redis-server-url>
-                    [ 
+                    [
                     --port <port>
                     --hostname <hostname>
                     --mbox <domainemailaddress>
@@ -64,6 +64,10 @@ func main() {
 
 func RedisClient(urlStr string) redis.Client {
 	url := redisurl.Parse(urlStr)
+
+	fmt.Println("HOST: ", url.Host)
+	fmt.Println("DB: ", url.Database)
+
 	var client redis.Client
 	address := fmt.Sprintf("%s:%d", url.Host, url.Port)
 	client.Addr = address

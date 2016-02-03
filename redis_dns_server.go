@@ -75,50 +75,47 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 }
 
 func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
-	if msg.Qtype == dns.TypeNS {
+	switch msg.Qtype {
+	case dns.TypeNS:
+		fmt.Println("Processing NS request")
 		if msg.Name == s.domain {
 			answers = append(answers, &dns.NS{
 				Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 300},
 				Ns:  s.hostname,
 			})
 		}
-		return answers
-	}
-	if msg.Qtype == dns.TypeSOA {
+	case dns.TypeSOA:
+		fmt.Println("Processing SOA request")
 		if msg.Name == s.domain {
 			answers = append(answers, s.SOA(msg))
 		}
-		return answers
-	}
-
-	record := s.Lookup(msg)
-	ttl := TTL
-
-	if msg.Qtype == dns.TypeCNAME {
-		fmt.Println("CNAME request")
-		answers = append(answers, &dns.CNAME{
-			Hdr:    dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: ttl},
-			Target: record.CName,
-		})
-	} else if msg.Qtype == dns.TypeA {
-		fmt.Println("A request")
+	case dns.TypeA:
+		fmt.Println("Processing A request")
+		record := s.Lookup(msg)
+		ttl := TTL
 		addr := record.PublicIP
 		if record.PublicIP != nil {
 			addr = record.PrivateIP
 		}
-		answers = append(answers, &dns.A{
-			Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl},
-			A:   addr,
-		})
-	} else if msg.Qtype == dns.TypeMX {
-		fmt.Println("MX request")
-		answers = append(answers, &dns.MX{
-			Hdr:        dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeMX, Class: dns.ClassINET, Ttl: ttl},
-			Preference: 10,
-			Mx:         record.CName,
-		})
-	} else {
-		fmt.Printf("Recieved a request for unknow record type: %d\n", msg.Qtype)
+		r := new(dns.A)
+		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
+		r.A = addr
+		answers = append(answers, r)
+	case dns.TypeCNAME:
+		fmt.Println("Processing CNAME request")
+		ttl := TTL
+		r := new(dns.CNAME)
+		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: ttl}
+		r.Target = msg.Name
+		answers = append(answers, r)
+	case dns.TypeMX:
+		fmt.Println("Processing MX request")
+		ttl := TTL
+		r := new(dns.MX)
+		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeMX, Class: dns.ClassINET, Ttl: ttl}
+		r.Preference = 10
+		r.Mx = msg.Name
+		answers = append(answers, r)
 	}
 	return answers
 }
