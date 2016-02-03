@@ -94,9 +94,6 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 		record := s.Lookup(msg)
 		ttl := TTL
 		addr := record.PublicIP
-		if record.PublicIP != nil {
-			addr = record.PrivateIP
-		}
 		r := new(dns.A)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
 		r.A = addr
