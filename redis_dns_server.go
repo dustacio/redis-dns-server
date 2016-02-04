@@ -14,10 +14,13 @@ import (
 const TTL uint32 = 300
 
 type Record struct {
-	CName      string    `json:"cname"`
-	PublicIP   net.IP    `json:"public_ip"`
-	PrivateIP  net.IP    `json:"private_ip"`
-	ValidUntil time.Time `json:"valid_until"`
+	CName         string    `json:"cname"`
+	PublicIP      net.IP    `json:"public_ip"`
+	PrivateIP     net.IP    `json:"private_ip"`
+	ValidUntil    time.Time `json:"valid_until"`
+	IPV4PublicIP  net.IP    `json:"ipv4_public_ip"`
+	IPV6PublicIP  net.IP    `json:"ipv6_public_ip"`
+	IPV4PrivateIP net.IP    `json:"ipv4_private_ip"`
 }
 
 type RedisDNSServer struct {
@@ -93,10 +96,19 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 		fmt.Println("Processing A request")
 		record := s.Lookup(msg)
 		ttl := TTL
-		addr := record.PublicIP
+		addr := record.IPV4PublicIP
 		r := new(dns.A)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
 		r.A = addr
+		answers = append(answers, r)
+	case dns.TypeAAAA:
+		fmt.Println("Processing AAAA request")
+		record := s.Lookup(msg)
+		ttl := TTL
+		addr := record.IPV6PublicIP
+		r := new(dns.AAAA)
+		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: ttl}
+		r.AAAA = addr
 		answers = append(answers, r)
 	case dns.TypeCNAME:
 		fmt.Println("Processing CNAME request")
