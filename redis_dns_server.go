@@ -18,9 +18,9 @@ type Record struct {
 	PublicIP      net.IP    `json:"public_ip"`
 	PrivateIP     net.IP    `json:"private_ip"`
 	ValidUntil    time.Time `json:"valid_until"`
-	IPV4PublicIP  net.IP    `json:"ipv4_public_ip"`
-	IPV6PublicIP  net.IP    `json:"ipv6_public_ip"`
-	IPV4PrivateIP net.IP    `json:"ipv4_private_ip"`
+	IPv4PublicIP  net.IP    `json:"ipv4_public_ip"`
+	IPv6PublicIP  net.IP    `json:"ipv6_public_ip"`
+	IPv4PrivateIP net.IP    `json:"ipv4_private_ip"`
 }
 
 type RedisDNSServer struct {
@@ -96,7 +96,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 		fmt.Println("Processing A request")
 		record := s.Lookup(msg)
 		ttl := TTL
-		addr := record.IPV4PublicIP
+		addr := record.IPv4PublicIP
 		r := new(dns.A)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
 		r.A = addr
@@ -104,8 +104,8 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 	case dns.TypeAAAA:
 		fmt.Println("Processing AAAA request")
 		record := s.Lookup(msg)
+		addr := record.IPv6PublicIP
 		ttl := TTL
-		addr := record.IPV6PublicIP
 		r := new(dns.AAAA)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: ttl}
 		r.AAAA = addr
