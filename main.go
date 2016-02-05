@@ -12,19 +12,13 @@ import (
 	"github.com/hoisie/redis"
 )
 
-const USAGE = `Usage: redis-dns-server --domain <domain>
-                    --redis-server-url <redis-server-url>
-                    [
-                    --port <port>
-                    --hostname <hostname>
-                    --mbox <domainemailaddress>
-                    ]
-
-The dns-server needs permission to bind to given port, default is 53.
-
-`
-
 func main() {
+	flag.Usage = func() {
+		fmt.Printf("\nUsage: redis-dns-server -domain <domain> -redis-server-url <redis-server-url>\n\n")
+		flag.PrintDefaults()
+		fmt.Printf("\nThe dns-server needs permission to bind to given port, default is 53.\n\n")
+	}
+
 	domain := flag.String("domain", "", "Domain for which the server serves")
 	redisServerURLStr := flag.String("redis-server-url", "", "redis://[:password]@]host:port[/db-number][?option=value]")
 	hostname := flag.String("hostname", "", "Public hostname of *this* server")
@@ -35,15 +29,13 @@ func main() {
 
 	flag.Parse()
 
-	if *domain == "" {
-		fmt.Println(USAGE)
-		log.Fatalf("missing required parameter: --domain")
-	} else if *redisServerURLStr == "" {
-		fmt.Println(USAGE)
-		log.Fatalf("missing required parameter: --redis-server-url")
-	} else if *help {
-		fmt.Println(USAGE)
+	if *help {
+		flag.Usage()
 		os.Exit(0)
+	} else if *domain == "" || *redisServerURLStr == "" {
+		flag.Usage()
+		fmt.Println("  -domain and -redis-server-url are required parameters")
+		os.Exit(1)
 	}
 
 	if *hostname == "" {
@@ -52,16 +44,17 @@ func main() {
 
 	redisClient := RedisClient(*redisServerURLStr)
 	server := NewRedisDNSServer(*domain, *hostname, redisClient, *mbox)
-	port_str := fmt.Sprintf(":%d", *port)
+	portStr := fmt.Sprintf(":%d", *port)
 	log.Printf("Serving DNS records for *.%s from %s port %s", server.domain,
-		server.hostname, port_str)
+		server.hostname, portStr)
 
 	go checkNSRecordMatches(server.domain, server.hostname)
 
-	go server.listenAndServe(port_str, "udp")
-	server.listenAndServe(port_str, "tcp")
+	go server.listenAndServe(portStr, "udp")
+	server.listenAndServe(portStr, "tcp")
 }
 
+// RedisClient is a client to the Redis server given by urlStr
 func RedisClient(urlStr string) redis.Client {
 	url := redisurl.Parse(urlStr)
 

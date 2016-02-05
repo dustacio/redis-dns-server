@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/hoisie/redis"
 	"github.com/miekg/dns"
 	"log"
@@ -11,8 +10,10 @@ import (
 	"time"
 )
 
+// TTL Time to Live in seconds
 const TTL uint32 = 300
 
+// Record is the json format message that is stored in Redis
 type Record struct {
 	CName         string    `json:"cname"`
 	PublicIP      net.IP    `json:"public_ip"`
@@ -23,6 +24,7 @@ type Record struct {
 	IPv4PrivateIP net.IP    `json:"ipv4_private_ip"`
 }
 
+// RedisDNSServer contains the configuration details for the server
 type RedisDNSServer struct {
 	domain      string
 	hostname    string
@@ -30,10 +32,12 @@ type RedisDNSServer struct {
 	mbox        string
 }
 
+// response is the dns message
 type response struct {
 	*dns.Msg
 }
 
+// NewRedisDNSServer is a convienence for creating a new server
 func NewRedisDNSServer(domain string, hostname string, redisClient redis.Client, mbox string) *RedisDNSServer {
 	if !strings.HasSuffix(domain, ".") {
 		domain += "."
@@ -71,16 +75,27 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 		if len(answers) > 0 {
 			r.Answer = append(r.Answer, answers...)
 		} else {
-			r.Ns = append(r.Ns, s.SOA(msg))
+			r.Answer = append(r.Answer, answers...)
+			r.SetRcode(request, dns.RcodeNameError)
+			// r.Ns = append(r.Ns, s.SOA(msg))
 		}
 	}
 	w.WriteMsg(r)
 }
 
-func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
+// Answer crafts a response to the DNS Question
+func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
+	var answers []dns.RR
+	record := s.Lookup(msg)
+	ttl := TTL
+	// Bail out early if the record isn't found in the key store
+	if record == nil || record.CName == "" {
+		return nil
+	}
+
 	switch msg.Qtype {
 	case dns.TypeNS:
-		fmt.Println("Processing NS request")
+		log.Println("Processing NS request")
 		if msg.Name == s.domain {
 			answers = append(answers, &dns.NS{
 				Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 300},
@@ -88,38 +103,41 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 			})
 		}
 	case dns.TypeSOA:
-		fmt.Println("Processing SOA request")
+		log.Println("Processing SOA request")
 		if msg.Name == s.domain {
 			answers = append(answers, s.SOA(msg))
 		}
 	case dns.TypeA:
-		fmt.Println("Processing A request")
-		record := s.Lookup(msg)
-		ttl := TTL
+		log.Println("Processing A request")
 		addr := record.IPv4PublicIP
+		// bail if no ip address
+		if addr == nil {
+			return nil
+		}
 		r := new(dns.A)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
 		r.A = addr
 		answers = append(answers, r)
 	case dns.TypeAAAA:
-		fmt.Println("Processing AAAA request")
-		record := s.Lookup(msg)
+		log.Println("Processing AAAA request")
 		addr := record.IPv6PublicIP
-		ttl := TTL
+		// bail if no ip address
+		if addr == nil {
+			return nil
+		}
+
 		r := new(dns.AAAA)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: ttl}
 		r.AAAA = addr
 		answers = append(answers, r)
 	case dns.TypeCNAME:
-		fmt.Println("Processing CNAME request")
-		ttl := TTL
+		log.Println("Processing CNAME request")
 		r := new(dns.CNAME)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: ttl}
 		r.Target = msg.Name
 		answers = append(answers, r)
 	case dns.TypeMX:
-		fmt.Println("Processing MX request")
-		ttl := TTL
+		log.Println("Processing MX request")
 		r := new(dns.MX)
 		r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeMX, Class: dns.ClassINET, Ttl: ttl}
 		r.Preference = 10
@@ -129,24 +147,31 @@ func (s *RedisDNSServer) Answer(msg dns.Question) (answers []dns.RR) {
 	return answers
 }
 
+// Lookup will locate the details in Redis for the fqdn, if not found
+// lookup will try to locate a wildcard entry for the fqdn
 func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
-	log.Printf("LOOKUP: Looking for '%s'", msg.Name)
+	log.Printf("LOOKUP: Looking for '%s'\n", msg.Name)
 	str, err := s.redisClient.Get(msg.Name)
-	log.Printf("Msg Name is '%s'", msg.Name)
-	log.Printf("LOOKUP: Found %s; Err: %v", str, err)
 	var result Record
-	if err == nil {
-		json.Unmarshal([]byte(str), &result)
-	} else {
-		log.Printf("No record for %s, trying wildcard %s", msg.Name, wildCardHostName(msg.Name))
-		domainDots := strings.Count(s.domain, ".")
-		if strings.Count(msg.Name, ".") > domainDots+1 {
-			str, err := s.redisClient.Get(wildCardHostName(msg.Name))
-			if err == nil {
-				json.Unmarshal([]byte(str), &result)
-			}
+
+	// error indicates that the record was not found
+	if err != nil {
+		wildcard := wildCardHostName(msg.Name)
+		log.Printf("No record for %s, trying wildcard %s\n", msg.Name, wildcard)
+
+		domainDots := strings.Count(s.domain, ".") + 1
+		msgDots := strings.Count(msg.Name, ".")
+		if msgDots <= domainDots {
+			return nil
+		}
+
+		str, err = s.redisClient.Get(wildcard)
+		if err != nil {
+			log.Printf("No record for %s\n", wildcard)
+			return nil
 		}
 	}
+	json.Unmarshal([]byte(str), &result)
 	return &result
 }
 
@@ -155,15 +180,11 @@ func wildCardHostName(hostName string) string {
 	return "*." + nameParts[1]
 }
 
+// SOA returns the Server of Authority record response
 func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
-	return &dns.SOA{
-		Hdr:     dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
-		Ns:      s.hostname,
-		Mbox:    s.mbox,
-		Serial:  uint32(time.Now().Unix()),
-		Refresh: 86400,
-		Retry:   7200,
-		Expire:  86400,
-		Minttl:  60,
-	}
+	r := new(dns.SOA)
+	r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
+	r.Ns = s.hostname
+	r.Mbox = s.mbox
+	return r
 }
