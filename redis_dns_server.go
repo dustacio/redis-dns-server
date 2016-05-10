@@ -77,7 +77,7 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 		} else {
 			r.Answer = append(r.Answer, answers...)
 			r.SetRcode(request, dns.RcodeNameError)
-			// r.Ns = append(r.Ns, s.SOA(msg))
+			r.Ns = append(r.Ns, s.SOA(msg)) // this was commented out
 		}
 	}
 	w.WriteMsg(r)
@@ -90,6 +90,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 	ttl := TTL
 	// Bail out early if the record isn't found in the key store
 	if record == nil || record.CName == "" {
+		log.Println("No record in key store, returning nil")
 		return nil
 	}
 
@@ -112,6 +113,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 		addr := record.IPv4PublicIP
 		// bail if no ip address
 		if addr == nil {
+			log.Println("No ip address, returning nil")
 			return nil
 		}
 		r := new(dns.A)
@@ -186,5 +188,6 @@ func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
 	r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
 	r.Ns = s.hostname
 	r.Mbox = s.mbox
+	r.Serial = 0
 	return r
 }
