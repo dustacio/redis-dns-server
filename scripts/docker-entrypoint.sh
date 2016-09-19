@@ -10,7 +10,7 @@ fi
 [ -z $REDIS_PORT ] && REDIS_PORT="6379"
 [ -z $REDIS_DB ] && REDIS_DB="0"
 [ -z $DOMAIN ] && echo "DOMAIN Not Set" && exit 1
-[ -z $DOMAIN_EMAIL ] && DOMAIN_EMAIL="admin@${DOMAIN}"
+[ -z $DOMAIN_EMAIL ] && DOMAIN_EMAIL="admin.${DOMAIN}"
 [ -z $HOSTNAME ] && echo "HOSTNAME Not Set" && exit 1
 
 if [ ! -z $REDIS_USERNAME ]; then

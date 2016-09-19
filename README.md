@@ -1,7 +1,7 @@
 # Redis Powered DNS Server in GoLang
 
-This is a DNS server that uses Redis as the backend. Redis records are stored 
-according to the FQDN (with trailing dot) as the key, and a JSON payload as 
+This is a DNS server that uses Redis as the backend. Redis records are stored
+according to the FQDN (with trailing dot) as the key, and a JSON payload as
 the value.
 
 ## JSON Payload:
@@ -17,7 +17,7 @@ the value.
 }
 ```
 
-Wildcard records, eg. `www.foo-12345.example.com` are supported.  The Redis 
+Wildcard records, eg. `www.foo-12345.example.com` are supported.  The Redis
 key for wildcards is `*.foo-12345.example.com`.
 
 ## Usage:
@@ -29,7 +29,7 @@ key for wildcards is `*.foo-12345.example.com`.
     --port 5300
 ```
 
-Port `53` is the standard port.  Using a port less than `1024` will require 
+Port `53` is the standard port.  Using a port less than `1024` will require
 root privileges.
 
 
@@ -71,7 +71,7 @@ GOOS=linux GOARCH=386 CGO_ENABLED=0 go build -o redis-dns-server.linux
 ### Using Vagrant
 
 A simple `Vagrantfile` is provided to quickly spin up an Ubuntu 14.04 LTS box,
-that already has GoLang installed, as well as the latest version of Docker, 
+that already has GoLang installed, as well as the latest version of Docker,
 and Docker Compose.
 
 ```
@@ -105,7 +105,7 @@ $ docker-compose build
 
 ### Docker
 
-Reference the above Development section for using Docker Compose.  
+Reference the above Development section for using Docker Compose.
 Alternatively, Redis DNS Server can be deployed with Docker in the following
 fashion.
 
@@ -141,7 +141,7 @@ $ docker run -itd \
 
 #### Using an Environment File
 
-You can load all `ENV` variables from an `ENV` file.  An example `ENV` file 
+You can load all `ENV` variables from an `ENV` file.  An example `ENV` file
 can be found at `docker-compose.env.example`, and looks something like:
 
 ```
@@ -151,7 +151,7 @@ REDIS_DB=0
 REDIS_USERNAME=myuser
 REDIS_PASSWORD=mypassword
 DOMAIN=example.com
-DOMAIN_EMAIL=admin@example.com
+DOMAIN_EMAIL=admin.example.com
 HOSTNAME=myhostname.example.com
 ```
 
