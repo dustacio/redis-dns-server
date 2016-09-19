@@ -69,18 +69,24 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 	r := new(dns.Msg)
 	r.SetReply(request)
 	r.Authoritative = true
+
 	for _, msg := range request.Question {
 		log.Printf("%v %#v %v (id=%v)", dns.TypeToString[msg.Qtype], msg.Name, w.RemoteAddr(), request.Id)
+
 		answers := s.Answer(msg)
+
 		if len(answers) > 0 {
+			log.Println("Answers present")
 			r.Answer = append(r.Answer, answers...)
 		} else {
-			r.Answer = append(r.Answer, answers...)
-			r.SetRcode(request, dns.RcodeNameError)
-			r.Ns = append(r.Ns, s.SOA(msg)) // this was commented out
+			log.Println("No Answers present")
+			r.Answer = append(r.Ns, s.SOA(msg))
+			log.Println("Appended...")
 		}
 	}
+	log.Printf("Send Reply: %+v", r)
 	w.WriteMsg(r)
+	log.Printf("SentReply")
 }
 
 // Answer crafts a response to the DNS Question
@@ -105,8 +111,22 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 		}
 	case dns.TypeSOA:
 		log.Println("Processing SOA request")
+		log.Println("  Domain is", s.domain)
 		if msg.Name == s.domain {
-			answers = append(answers, s.SOA(msg))
+			log.Println("  msg.Name == s.domain", msg.Name, s.domain)
+
+			r := new(dns.SOA)
+			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
+			r.Ns = s.hostname
+			r.Mbox = "d.ascreen.co"
+			r.Serial = uint32(time.Now().Unix())
+			r.Refresh = 60
+			r.Retry = 60
+			r.Expire = 86400
+			r.Minttl = 60
+			answers = append(answers, r)
+		} else {
+			log.Println("  no match!", msg.Name, s.domain)
 		}
 	case dns.TypeA:
 		log.Println("Processing A request")
@@ -154,6 +174,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
 	log.Printf("LOOKUP: Looking for '%s'\n", msg.Name)
 	str, err := s.redisClient.Get(msg.Name)
+	log.Printf(" found str\n%s", str)
 	var result Record
 
 	// error indicates that the record was not found
@@ -164,6 +185,7 @@ func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
 		domainDots := strings.Count(s.domain, ".") + 1
 		msgDots := strings.Count(msg.Name, ".")
 		if msgDots <= domainDots {
+			log.Printf("msgDots <= domainDots returning nil")
 			return nil
 		}
 
@@ -188,6 +210,10 @@ func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
 	r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
 	r.Ns = s.hostname
 	r.Mbox = s.mbox
-	r.Serial = 0
+	r.Serial = uint32(time.Now().Unix())
+	r.Refresh = 86400
+	r.Retry = 7200
+	r.Expire = 86400
+	r.Minttl = 60
 	return r
 }

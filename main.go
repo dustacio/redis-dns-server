@@ -24,7 +24,7 @@ func main() {
 	hostname := flag.String("hostname", "", "Public hostname of *this* server")
 	port := flag.Int("port", 53, "Port")
 	help := flag.Bool("help", false, "Get help")
-	emailAddr := "admin@" + *domain
+	emailAddr := "admin." + *domain
 	mbox := flag.String("mbox", emailAddr, "Domain Admin Email Address")
 
 	flag.Parse()
