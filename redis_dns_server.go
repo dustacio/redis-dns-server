@@ -43,6 +43,10 @@ func NewRedisDNSServer(domain string, hostname string, redisClient redis.Client,
 		domain += "."
 	}
 
+	if !strings.HasSuffix(mbox, ".") {
+		mbox += "."
+	}
+
 	if !strings.HasSuffix(hostname, ".") {
 		hostname += "."
 	}
