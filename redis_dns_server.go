@@ -118,7 +118,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 			r := new(dns.SOA)
 			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
 			r.Ns = s.hostname
-			r.Mbox = "d.ascreen.co"
+			r.Mbox = s.mbox
 			r.Serial = uint32(time.Now().Unix())
 			r.Refresh = 60
 			r.Retry = 60
