@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/elcuervo/redisurl"
@@ -36,6 +37,11 @@ func main() {
 		flag.Usage()
 		fmt.Println("  -domain and -redis-server-url are required parameters")
 		os.Exit(1)
+	}
+
+	if strings.Contains(*mbox, "@") {
+		fmt.Println("Email addresses in DNS can not contain the character @")
+		os.Exit(0)
 	}
 
 	if *hostname == "" {
