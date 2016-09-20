@@ -6,12 +6,16 @@ import (
 	"github.com/miekg/dns"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // TTL Time to Live in seconds
 const TTL uint32 = 300
+
+// The key used to read the serial number
+const serialNumberKey = "redis-dns-server-serial-no"
 
 // Record is the json format message that is stored in Redis
 type Record struct {
@@ -122,7 +126,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
 			r.Ns = s.hostname
 			r.Mbox = s.mbox
-			r.Serial = uint32(time.Now().Unix())
+			r.Serial = s.getSerialNumber()
 			r.Refresh = 60
 			r.Retry = 60
 			r.Expire = 86400
@@ -172,6 +176,18 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 	return answers
 }
 
+func (s *RedisDNSServer) getSerialNumber() uint32 {
+	sn, err := s.redisClient.Get(serialNumberKey)
+	if err != nil {
+		log.Println("Error reading SN", err)
+		return uint32(0)
+	}
+
+	x, _ := strconv.Atoi(string(sn))
+	log.Println("Serial Number is", uint32(x))
+	return uint32(x)
+}
+
 // Lookup will locate the details in Redis for the fqdn, if not found
 // lookup will try to locate a wildcard entry for the fqdn
 func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
@@ -213,7 +229,7 @@ func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
 	r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
 	r.Ns = s.hostname
 	r.Mbox = s.mbox
-	r.Serial = uint32(time.Now().Unix())
+	r.Serial = s.getSerialNumber()
 	r.Refresh = 86400
 	r.Retry = 7200
 	r.Expire = 86400
