@@ -70,6 +70,7 @@ func (s *RedisDNSServer) listenAndServe(port, net string) {
 }
 
 func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
+	log.Println("The mbox is", s.mbox)
 	r := new(dns.Msg)
 	r.SetReply(request)
 	r.Authoritative = true

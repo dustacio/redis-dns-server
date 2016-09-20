@@ -112,6 +112,7 @@ fashion.
 #### Building
 
 ```
+$ make linux
 $ docker build -t 'redis-dns-server:latest' .
 ```
 

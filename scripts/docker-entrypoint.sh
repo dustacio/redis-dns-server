@@ -20,7 +20,7 @@ else
 fi
 
 URI="redis://${USER_PASS}${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB}"
-/go/bin/redis-dns-server \
+/redis-dns-server \
     --domain=${DOMAIN} \
     --mbox=${DOMAIN_EMAIL} \
     --hostname=${HOSTNAME} \
