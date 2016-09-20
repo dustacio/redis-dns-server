@@ -83,14 +83,12 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 			log.Println("Answers present")
 			r.Answer = append(r.Answer, answers...)
 		} else {
-			log.Println("No Answers present")
+			log.Println("No Answers present, sending SOA")
 			r.Answer = append(r.Ns, s.SOA(msg))
-			log.Println("Appended...")
 		}
 	}
-	log.Printf("Send Reply: %+v", r)
+	log.Printf("Sent Reply: %+v", r)
 	w.WriteMsg(r)
-	log.Printf("SentReply")
 }
 
 // Answer crafts a response to the DNS Question
