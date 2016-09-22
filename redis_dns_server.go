@@ -198,7 +198,7 @@ func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
 
 	// error indicates that the record was not found
 	if err != nil {
-		wildcard := wildCardHostName(msg.Name)
+		wildcard := WildCardHostName(msg.Name)
 		log.Printf("No record for %s, trying wildcard %s\n", msg.Name, wildcard)
 
 		domainDots := strings.Count(s.domain, ".") + 1
@@ -218,7 +218,7 @@ func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
 	return &result
 }
 
-func wildCardHostName(hostName string) string {
+func WildCardHostName(hostName string) string {
 	nameParts := strings.SplitAfterN(hostName, ".", 2)
 	return "*." + nameParts[1]
 }
