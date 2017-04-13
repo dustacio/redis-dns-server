@@ -48,6 +48,7 @@ func main() {
 		*hostname, _ = os.Hostname()
 	}
 
+	log.Printf("Redis: %s\n", redisServerURLStr)
 	redisClient := RedisClient(*redisServerURLStr)
 	server := NewRedisDNSServer(*domain, *hostname, redisClient, *mbox)
 	portStr := fmt.Sprintf(":%d", *port)
