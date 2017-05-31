@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/hoisie/redis"
-	"github.com/miekg/dns"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hoisie/redis"
+	"github.com/miekg/dns"
 )
 
 // TTL Time to Live in seconds
@@ -16,6 +17,10 @@ const TTL uint32 = 300
 
 // The key used to read the serial number
 const serialNumberKey = "redis-dns-server-serial-no"
+
+// The key used to store the ns servers, comma separated, no space
+// e.g. host1.domain,host2.domain
+const nsServerKey = "redis-dns-server-ns-servers"
 
 // Record is the json format message that is stored in Redis
 type Record struct {
@@ -89,7 +94,7 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 			r.Answer = append(r.Answer, answers...)
 		} else {
 			log.Println("No Answers present, sending SOA")
-			r.Answer = append(r.Ns, s.SOA(msg))
+			r.Answer = append(r.Ns, s.SOA(msg)...)
 		}
 	}
 	log.Printf("Sent Reply: %+v", r)
@@ -122,16 +127,19 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 		if msg.Name == s.domain {
 			log.Println("  msg.Name == s.domain", msg.Name, s.domain)
 
-			r := new(dns.SOA)
-			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
-			r.Ns = s.hostname
-			r.Mbox = s.mbox
-			r.Serial = s.getSerialNumber()
-			r.Refresh = 60
-			r.Retry = 60
-			r.Expire = 86400
-			r.Minttl = 60
-			answers = append(answers, r)
+			nsServers := s.getNsServers()
+			for i := 0; i < len(nsServers); i++ {
+				r := new(dns.SOA)
+				r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
+				r.Ns = nsServers[i]
+				r.Mbox = s.mbox
+				r.Serial = s.getSerialNumber()
+				r.Refresh = 60
+				r.Retry = 60
+				r.Expire = 86400
+				r.Minttl = 60
+				answers = append(answers, r)
+			}
 		} else {
 			log.Println("  no match!", msg.Name, s.domain)
 		}
@@ -188,6 +196,15 @@ func (s *RedisDNSServer) getSerialNumber() uint32 {
 	return uint32(x)
 }
 
+func (s *RedisDNSServer) getNsServers() []string {
+	servers, err := s.redisClient.Get(nsServerKey)
+	if err != nil {
+		log.Println("Error reading NS Servers", err)
+		return []string{}
+	}
+	return strings.Split(string(servers), ",")
+}
+
 // Lookup will locate the details in Redis for the fqdn, if not found
 // lookup will try to locate a wildcard entry for the fqdn
 func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
@@ -224,15 +241,20 @@ func WildCardHostName(hostName string) string {
 }
 
 // SOA returns the Server of Authority record response
-func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
-	r := new(dns.SOA)
-	r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
-	r.Ns = s.hostname
-	r.Mbox = s.mbox
-	r.Serial = s.getSerialNumber()
-	r.Refresh = 86400
-	r.Retry = 7200
-	r.Expire = 86400
-	r.Minttl = 60
-	return r
+func (s *RedisDNSServer) SOA(msg dns.Question) []dns.RR {
+	nsServers := s.getNsServers()
+	answers := s.Answer(msg)
+	for i := 0; i < len(nsServers); i++ {
+		r := new(dns.SOA)
+		r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
+		r.Ns = nsServers[i]
+		r.Mbox = s.mbox
+		r.Serial = s.getSerialNumber()
+		r.Refresh = 86400
+		r.Retry = 7200
+		r.Expire = 86400
+		r.Minttl = 60
+		answers = append(answers, r)
+	}
+	return answers
 }
