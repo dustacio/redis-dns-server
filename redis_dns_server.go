@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -132,9 +131,6 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 			for i := 0; i < len(nsServers); i++ {
 				r := new(dns.SOA)
 				r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
-				fmt.Println("*********************************************")
-				fmt.Println("NS SERVER", i, nsServers[i])
-				fmt.Println("*********************************************")
 				r.Ns = nsServers[i]
 				r.Mbox = s.mbox
 				r.Serial = s.getSerialNumber()
