@@ -11,8 +11,9 @@ the value.
     "id": 27469,
     "cname": "foo-12345.example.com.",
     "fqdn": "foo-12345.example.com.",
-    "public_ip": "104.0.0.1",
-    "private_ip": "10.10.10.1",
+    "ipv4_public_ip": "104.0.0.1",
+    "ipv4_private_ip": "",
+    "ipv4_private_ip": "10.10.10.1",
     "valid_until": "2015-12-12T03:53:26.150Z"
 }
 ```
