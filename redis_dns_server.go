@@ -90,15 +90,16 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 		answers := s.Answer(msg)
 
 		if len(answers) > 0 {
-			log.Println("Answers present")
 			r.Answer = append(r.Answer, answers...)
 		} else {
-			log.Println("No Answers present, sending SOA")
-			r.Answer = append(r.Ns, s.SOA(msg)...)
+			r.Ns = append(r.Ns, s.SOA(msg))
 		}
 	}
 	log.Printf("Sent Reply: %+v", r)
-	w.WriteMsg(r)
+	err := w.WriteMsg(r)
+	if err != nil {
+		log.Println("ERROR Writing msg", err)
+	}
 }
 
 // Answer crafts a response to the DNS Question
@@ -114,32 +115,19 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 
 	switch msg.Qtype {
 	case dns.TypeNS:
-		log.Println("Processing NS request")
-		if msg.Name == s.domain {
-			answers = append(answers, &dns.NS{
-				Hdr: dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 300},
-				Ns:  s.hostname,
-			})
+		nsServers := s.getNsServers()
+		for i := 0; i < len(nsServers); i++ {
+			r := new(dns.NS)
+			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: ttl}
+			r.Ns = dns.Fqdn(nsServers[i])
+			answers = append(answers, r)
 		}
 	case dns.TypeSOA:
 		log.Println("Processing SOA request")
 		log.Println("  Domain is", s.domain)
 		if msg.Name == s.domain {
 			log.Println("  msg.Name == s.domain", msg.Name, s.domain)
-
-			nsServers := s.getNsServers()
-			for i := 0; i < len(nsServers); i++ {
-				r := new(dns.SOA)
-				r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
-				r.Ns = nsServers[i]
-				r.Mbox = s.mbox
-				r.Serial = s.getSerialNumber()
-				r.Refresh = 60
-				r.Retry = 60
-				r.Expire = 86400
-				r.Minttl = 60
-				answers = append(answers, r)
-			}
+			answers = append(answers, s.SOA(msg))
 		} else {
 			log.Println("  no match!", msg.Name, s.domain)
 		}
@@ -241,20 +229,15 @@ func WildCardHostName(hostName string) string {
 }
 
 // SOA returns the Server of Authority record response
-func (s *RedisDNSServer) SOA(msg dns.Question) []dns.RR {
-	nsServers := s.getNsServers()
-	answers := s.Answer(msg)
-	for i := 0; i < len(nsServers); i++ {
-		r := new(dns.SOA)
-		r.Hdr = dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60}
-		r.Ns = nsServers[i]
-		r.Mbox = s.mbox
-		r.Serial = s.getSerialNumber()
-		r.Refresh = 86400
-		r.Retry = 7200
-		r.Expire = 86400
-		r.Minttl = 60
-		answers = append(answers, r)
+func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
+	return &dns.SOA{
+		Hdr:     dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
+		Ns:      dns.Fqdn(s.getNsServers()[0]),
+		Mbox:    s.mbox,
+		Serial:  s.getSerialNumber(),
+		Refresh: 86400,
+		Retry:   7200,
+		Expire:  86400,
+		Minttl:  60,
 	}
-	return answers
 }

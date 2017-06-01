@@ -51,7 +51,7 @@ func main() {
 	log.Printf("Redis: %s\n", redisServerURLStr)
 	redisClient := RedisClient(*redisServerURLStr)
 	server := NewRedisDNSServer(*domain, *hostname, redisClient, *mbox)
-	portStr := fmt.Sprintf(":%d", *port)
+	portStr := fmt.Sprintf("0.0.0.0:%d", *port)
 	log.Printf("Serving DNS records for *.%s from %s port %s", server.domain,
 		server.hostname, portStr)
 
