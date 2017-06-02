@@ -237,7 +237,7 @@ func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
 		Serial:  s.getSerialNumber(),
 		Refresh: 86400,
 		Retry:   7200,
-		Expire:  86400,
+		Expire:  3600,
 		Minttl:  60,
 	}
 }
