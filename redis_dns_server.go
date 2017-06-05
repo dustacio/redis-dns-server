@@ -125,12 +125,12 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 	case dns.TypeSOA:
 		log.Println("Processing SOA request")
 		log.Println("  Domain is", s.domain)
-		if msg.Name == s.domain {
-			log.Println("  msg.Name == s.domain", msg.Name, s.domain)
-			answers = append(answers, s.SOA(msg))
-		} else {
-			log.Println("  no match!", msg.Name, s.domain)
-		}
+		//if msg.Name == s.domain {
+		log.Println("  msg.Name == s.domain", msg.Name, s.domain)
+		answers = append(answers, s.SOA(msg))
+		//		} else {
+		//			log.Println("  no match!", msg.Name, s.domain)
+		//		}
 	case dns.TypeA:
 		log.Println("Processing A request")
 		addr := record.IPv4PublicIP
@@ -237,7 +237,7 @@ func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
 		Serial:  s.getSerialNumber(),
 		Refresh: 86400,
 		Retry:   7200,
-		Expire:  3600,
+		Expire:  3600, // RFC1912 suggests 2-4 weeks 1209600-2419200
 		Minttl:  60,
 	}
 }
