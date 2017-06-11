@@ -8,26 +8,28 @@ the value.
 
 ```json
 {
-    "id": 27469,
     "cname": "foo-12345.example.com.",
     "fqdn": "foo-12345.example.com.",
-    "ipv4_public_ip": "104.0.0.1",
+    "id": 27469,
     "ipv4_private_ip": "",
     "ipv4_private_ip": "10.10.10.1",
-    "valid_until": "2015-12-12T03:53:26.150Z"
+    "ipv4_public_ip": "104.0.0.1",
+    "ns": ["ns1.example.com", "ns2.example.com"],
+    "soa": "example.com"
+    "valid_until": "2015-12-12T03:53:26.150Z",
 }
 ```
 
-Wildcard records, eg. `www.foo-12345.example.com` are supported.  The Redis
-key for wildcards is `*.foo-12345.example.com`.
+Wildcard records, eg. `www.foo-12345.example.com.` are supported.  The Redis
+key for wildcards is `*.foo-12345.example.com.`.
 
 ## Usage:
 
 ```
 ./redis-dns-server \
-    --domain example.com \
-    --redis-server-url redis://127.0.0.1:6379 \
-    --port 5300
+    -redis-server-url redis://127.0.0.1:6379 \
+    -mbox admin.example.com # Don't use '@' in DNS email addresses
+    -port 5300
 ```
 
 Port `53` is the standard port.  Using a port less than `1024` will require
@@ -52,21 +54,6 @@ $ go get github.com/hoisie/redis
 $ go build -o redis-dns-server redis_dns_server.go main.go
 
 $ ./redis-dns-server --help
-```
-
-### Cross Compiling
-
-Reference:
-
- * http://stackoverflow.com/questions/12168873/cross-compile-go-on-osx
-
-```
-cd /usr/local/go/src
-sudo GOOS=linux GOARCH=386 CGO_ENABLED=0 ./make.bash --no-clean
-```
-
-```
-GOOS=linux GOARCH=386 CGO_ENABLED=0 go build -o redis-dns-server.linux
 ```
 
 ### Using Vagrant

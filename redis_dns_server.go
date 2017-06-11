@@ -18,10 +18,6 @@ const TTL uint32 = 300
 // The key used to read the serial number
 const serialNumberKey = "redis-dns-server-serial-no"
 
-// The key used to store the ns servers, comma separated, no space
-// e.g. host1.domain,host2.domain
-const nsServerKey = "redis-dns-server-ns-servers"
-
 // Record is the json format message that is stored in Redis
 type Record struct {
 	CName         string    `json:"cname"`
@@ -31,11 +27,12 @@ type Record struct {
 	IPv4PublicIP  net.IP    `json:"ipv4_public_ip"`
 	IPv6PublicIP  net.IP    `json:"ipv6_public_ip"`
 	IPv4PrivateIP net.IP    `json:"ipv4_private_ip"`
+	NameServers   []string  `json:"name_servers"`
+	SOA           string    `json:"soa"`
 }
 
 // RedisDNSServer contains the configuration details for the server
 type RedisDNSServer struct {
-	domain      string
 	hostname    string
 	redisClient redis.Client
 	mbox        string
@@ -47,11 +44,7 @@ type response struct {
 }
 
 // NewRedisDNSServer is a convienence for creating a new server
-func NewRedisDNSServer(domain string, hostname string, redisClient redis.Client, mbox string) *RedisDNSServer {
-	if !strings.HasSuffix(domain, ".") {
-		domain += "."
-	}
-
+func NewRedisDNSServer(hostname string, redisClient redis.Client, mbox string) *RedisDNSServer {
 	if !strings.HasSuffix(mbox, ".") {
 		mbox += "."
 	}
@@ -61,13 +54,12 @@ func NewRedisDNSServer(domain string, hostname string, redisClient redis.Client,
 	}
 
 	server := &RedisDNSServer{
-		domain:      domain,
 		hostname:    hostname,
 		redisClient: redisClient,
 		mbox:        mbox,
 	}
 
-	dns.HandleFunc(server.domain, server.handleRequest)
+	dns.HandleFunc(".", server.handleRequest)
 	return server
 }
 
@@ -92,7 +84,7 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, request *dns.Msg) {
 		if len(answers) > 0 {
 			r.Answer = append(r.Answer, answers...)
 		} else {
-			r.Ns = append(r.Ns, s.SOA(msg))
+			// r.Ns = append(r.Ns, s.SOA(msg))
 		}
 	}
 	log.Printf("Sent Reply: %+v", r)
@@ -115,7 +107,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 
 	switch msg.Qtype {
 	case dns.TypeNS:
-		nsServers := s.getNsServers()
+		nsServers := record.NameServers
 		for i := 0; i < len(nsServers); i++ {
 			r := new(dns.NS)
 			r.Hdr = dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: ttl}
@@ -124,13 +116,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 		}
 	case dns.TypeSOA:
 		log.Println("Processing SOA request")
-		log.Println("  Domain is", s.domain)
-		//if msg.Name == s.domain {
-		log.Println("  msg.Name == s.domain", msg.Name, s.domain)
-		answers = append(answers, s.SOA(msg))
-		//		} else {
-		//			log.Println("  no match!", msg.Name, s.domain)
-		//		}
+		answers = append(answers, s.SOA(msg, record))
 	case dns.TypeA:
 		log.Println("Processing A request")
 		addr := record.IPv4PublicIP
@@ -184,15 +170,6 @@ func (s *RedisDNSServer) getSerialNumber() uint32 {
 	return uint32(x)
 }
 
-func (s *RedisDNSServer) getNsServers() []string {
-	servers, err := s.redisClient.Get(nsServerKey)
-	if err != nil {
-		log.Println("Error reading NS Servers", err)
-		return []string{}
-	}
-	return strings.Split(string(servers), ",")
-}
-
 // Lookup will locate the details in Redis for the fqdn, if not found
 // lookup will try to locate a wildcard entry for the fqdn
 func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
@@ -206,7 +183,7 @@ func (s *RedisDNSServer) Lookup(msg dns.Question) *Record {
 		wildcard := WildCardHostName(msg.Name)
 		log.Printf("No record for %s, trying wildcard %s\n", msg.Name, wildcard)
 
-		domainDots := strings.Count(s.domain, ".") + 1
+		domainDots := strings.Count(result.SOA, ".") + 1
 		msgDots := strings.Count(msg.Name, ".")
 		if msgDots <= domainDots {
 			log.Printf("msgDots <= domainDots returning nil")
@@ -229,10 +206,10 @@ func WildCardHostName(hostName string) string {
 }
 
 // SOA returns the Server of Authority record response
-func (s *RedisDNSServer) SOA(msg dns.Question) dns.RR {
+func (s *RedisDNSServer) SOA(msg dns.Question, record *Record) dns.RR {
 	return &dns.SOA{
-		Hdr:     dns.RR_Header{Name: s.domain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
-		Ns:      dns.Fqdn(s.getNsServers()[0]),
+		Hdr:     dns.RR_Header{Name: msg.Name, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 60},
+		Ns:      dns.Fqdn(record.NameServers[0]),
 		Mbox:    s.mbox,
 		Serial:  s.getSerialNumber(),
 		Refresh: 86400,
