@@ -8,27 +8,28 @@ the value.
 
 ```json
 {
-    "cname": "foo-12345.example.com.",
+    "cnames": ["foo-12345.example.com."],
     "fqdn": "foo-12345.example.com.",
     "id": 27469,
-    "ipv4_private_ip": "",
-    "ipv4_private_ip": "10.10.10.1",
-    "ipv4_public_ip": "104.0.0.1",
-    "ns": ["ns1.example.com", "ns2.example.com"],
+    "ipv4_public_ips": ["104.0.0.1"],
+    "ipv6_public_ips": [],
+    "mbox": "admin.example.com."
+    "mx_servers": [],
+    "name_servers": ["ns1.example.com", "ns2.example.com"],
     "soa": "example.com"
-    "valid_until": "2015-12-12T03:53:26.150Z",
+    "ttl": 300,
 }
 ```
-
-Wildcard records, eg. `www.foo-12345.example.com.` are supported.  The Redis
-key for wildcards is `*.foo-12345.example.com.`.
+* supply cnames or ipv4_public_ips, not both
+* mbox admin.example.com # Don't use '@' in DNS email addresses
+* wildcard records, eg. `www.foo-12345.example.com.` are supported.  The Redis
+  key for wildcards is `*.foo-12345.example.com.`.
 
 ## Usage:
 
 ```
 ./redis-dns-server \
     -redis-server-url redis://127.0.0.1:6379 \
-    -mbox admin.example.com # Don't use '@' in DNS email addresses
     -port 5300
 ```
 
@@ -43,17 +44,14 @@ root privileges.
 General build steps:
 
 ```
+
 $ export GOPATH=/go/src/
-
 $ go get github.com/miekg/dns
-
 $ go get github.com/elcuervo/redisurl
-
 $ go get github.com/hoisie/redis
-
 $ go build -o redis-dns-server redis_dns_server.go main.go
-
 $ ./redis-dns-server --help
+
 ```
 
 ### Using Vagrant
@@ -63,9 +61,10 @@ that already has GoLang installed, as well as the latest version of Docker,
 and Docker Compose.
 
 ```
-$ vagrant up
 
+$ vagrant up
 $ vagrant ssh
+
 ```
 
 Inside Vagrant, the current working project directory will be accessible at
@@ -77,15 +76,18 @@ Inside Vagrant, the current working project directory will be accessible at
 Either from your local machine running Docker, or from within the Vagrant box:
 
 ```
-$ cp -a docker-compose.env.example docker-compose.env
 
+$ cp -a docker-compose.env.example docker-compose.env
 $ docker-compose up
+
 ```
 
 To rebuild the image manually:
 
 ```
+
 $ docker-compose build
+
 ```
 
 
@@ -100,32 +102,37 @@ fashion.
 #### Building
 
 ```
+
 $ make linux
 $ docker build -t 'redis-dns-server:latest' .
+
 ```
 
 #### Linking With a Redis Container
 
 ```
-$ docker run -tid --name redis redis
 
+$ docker run -tid --name redis redis
 $ docker run -itd \
     -e DOMAIN="example.com" \
     -e HOSTNAME="myhostname.example.com" \
     --link redis:db \
     -p 53:53 \
     redis-dns-server:latest
+
 ```
 
 #### Linking With an External Redis Server
 
 ```
+
 $ docker run -itd \
     -e DOMAIN="example.com" \
     -e HOSTNAME="myhostname.example.com" \
     -e REDIS_HOST="redis.example.com" \
     -p 53:53 \
     redis-dns-server:latest
+
 ```
 
 #### Using an Environment File
@@ -134,6 +141,7 @@ You can load all `ENV` variables from an `ENV` file.  An example `ENV` file
 can be found at `docker-compose.env.example`, and looks something like:
 
 ```
+
 REDIS_HOST=redis.example.com
 REDIS_PORT=6379
 REDIS_DB=0
@@ -142,6 +150,7 @@ REDIS_PASSWORD=mypassword
 DOMAIN=example.com
 DOMAIN_EMAIL=admin.example.com
 HOSTNAME=myhostname.example.com
+
 ```
 
 Using it:
@@ -159,5 +168,3 @@ $ docker run -itd \
  * https://github.com/miekg/dns
 
 ## TODO List:
-
- * Use valid_until to calculate the TTL

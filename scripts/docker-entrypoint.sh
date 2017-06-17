@@ -9,8 +9,6 @@ fi
 [ -z $REDIS_HOST ] && echo "REDIS_HOST Not Set" && exit 1
 [ -z $REDIS_PORT ] && REDIS_PORT="6379"
 [ -z $REDIS_DB ] && REDIS_DB="0"
-[ -z $DOMAIN ] && echo "DOMAIN Not Set" && exit 1
-[ -z $DOMAIN_EMAIL ] && DOMAIN_EMAIL="admin.${DOMAIN}"
 [ -z $HOSTNAME ] && echo "HOSTNAME Not Set" && exit 1
 
 if [ ! -z $REDIS_USERNAME ]; then
@@ -21,7 +19,5 @@ fi
 
 URI="redis://${USER_PASS}${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB}"
 /redis-dns-server \
-    --domain=${DOMAIN} \
-    --mbox=${DOMAIN_EMAIL} \
     --hostname=${HOSTNAME} \
     --redis-server-url=${URI}
