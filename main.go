@@ -4,8 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
-	"strings"
+	"strconv"
 
 	"github.com/elcuervo/redisurl"
 	"github.com/hoisie/redis"
@@ -23,55 +24,71 @@ func main() {
 	hostname := flag.String("hostname", "", "Public hostname of *this* server")
 	port := flag.Int("port", 53, "Port")
 	help := flag.Bool("help", false, "Get help")
-	mbox := flag.String("mbox", "", "Domain Admin Email Address")
+	mbox := flag.String("mbox", "", "No longer used")
 
+	Header()
 	flag.Parse()
 
 	if *domain != "" {
-		fmt.Println("Domain provided but no longer used", *domain)
+		log.Println("Domain provided but no longer used", *domain)
+	}
+
+	if *mbox != "" {
+		log.Println("Mbox provided by no longer used", *mbox)
 	}
 
 	if *help {
 		flag.Usage()
 		os.Exit(0)
-	} else if *mbox == "" || *redisServerURLStr == "" {
+	} else if *redisServerURLStr == "" {
 		flag.Usage()
-		fmt.Println("  -mbox and -redis-server-url are required parameters")
+		log.Println("  -redis-server-url is a required parameter")
 		os.Exit(1)
-	}
-
-	if strings.Contains(*mbox, "@") {
-		fmt.Println("Email addresses in DNS can not contain the @ character, use dots")
-		os.Exit(0)
 	}
 
 	if *hostname == "" {
 		*hostname, _ = os.Hostname()
 	}
 
-	log.Printf("Redis: %s\n", *redisServerURLStr)
 	redisClient := RedisClient(*redisServerURLStr)
 	server := NewRedisDNSServer(*hostname, redisClient, *mbox)
-	portStr := fmt.Sprintf("0.0.0.0:%d", *port)
-	log.Printf("Serving DNS records from %s port %s",
-		server.hostname, portStr)
+	hostPort := net.JoinHostPort("0.0.0.0", strconv.Itoa(*port))
+	log.Printf("Serving DNS records from %s on %s", server.hostname, hostPort)
 
-	go server.listenAndServe(portStr, "udp")
-	server.listenAndServe(portStr, "tcp")
+	go server.listenAndServe(hostPort, "udp")
+	server.listenAndServe(hostPort, "tcp")
+}
+
+func Header() {
+	head := `
+     ___                         ___           ___
+    /\  \         _____         /\  \         /\__\
+   /::\  \       /::\  \        \:\  \       /:/ _/_
+  /:/\:\__\     /:/\:\  \        \:\  \     /:/ /\  \
+ /:/ /:/  /    /:/  \:\__\   _____\:\  \   /:/ /::\  \
+/:/_/:/__/___ /:/__/ \:|__| /::::::::\__\ /:/_/:/\:\__\
+\:\/:::::/  / \:\  \ /:/  / \:\~~\~~\/__/ \:\/:/ /:/  /
+ \::/~~/~~~~   \:\  /:/  /   \:\  \        \::/ /:/  /
+  \:\~~\        \:\/:/  /     \:\  \        \/_/:/  /
+   \:\__\        \::/  /       \:\__\         /:/  /
+    \/__/         \/__/         \/__/         \/__/
+
+     Redis DNS Server
+`
+	log.Println(head)
+
 }
 
 // RedisClient is a client to the Redis server given by urlStr
 func RedisClient(urlStr string) redis.Client {
 	url := redisurl.Parse(urlStr)
 
-	fmt.Println("HOST: ", url.Host)
-	fmt.Println("DB: ", url.Database)
+	log.Printf("Redis Client Host: %s, Port: %d, DB: %d\n", url.Host, url.Port, url.Database)
 
 	var client redis.Client
-	address := fmt.Sprintf("%s:%d", url.Host, url.Port)
+	address := net.JoinHostPort(url.Host, strconv.Itoa(url.Port))
 	client.Addr = address
 	client.Db = url.Database
-	log.Printf("Redis DB is %d", url.Database)
 	client.Password = url.Password
 
 	return client
