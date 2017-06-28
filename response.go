@@ -22,13 +22,15 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 	case dns.TypeNS:
 		answers = append(answers, NS(msg.Name, record)...)
 	case dns.TypeSOA:
-		answers = append(answers, SOA(msg.Name, record, s.getSerialNumber()))
-	// case dns.TypeA:
-	// 	answers = append(answers, A(msg.Name, record)...)
-	// case dns.TypeAAAA:
-	// 	answers = append(answers, AAAA(msg.Name, record)...)
-	// case dns.TypeCNAME:
-	// 	answers = append(answers, CNAME(msg.Name, record)...)
+		if len(record.NameServers) > 0 {
+			answers = append(answers, SOA(msg.Name, record, s.getSerialNumber()))
+		}
+	case dns.TypeA:
+		answers = append(answers, A(msg.Name, record)...)
+	case dns.TypeAAAA:
+		answers = append(answers, AAAA(msg.Name, record)...)
+	case dns.TypeCNAME:
+		answers = append(answers, CNAME(msg.Name, record)...)
 	case dns.TypeMX:
 		answers = append(answers, MX(msg.Name, record)...)
 	default:
