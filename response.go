@@ -14,6 +14,7 @@ func (s *RedisDNSServer) Answer(msg dns.Question) []dns.RR {
 
 	// Bail out early if the record isn't found in the key store
 	if record == nil {
+		log.Printf("Error no record found for %s\n", msg.Name)
 		return nil
 	}
 

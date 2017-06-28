@@ -19,6 +19,8 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 		if len(answers) > 0 {
 			m.Answer = append(m.Answer, answers...)
+		} else {
+			log.Printf("Warning, No answers\n")
 		}
 	}
 
