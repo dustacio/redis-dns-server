@@ -80,6 +80,12 @@ func NS(name string, record *Record) []dns.RR {
 // A returns A records
 func A(name string, record *Record) []dns.RR {
 	var answers []dns.RR
+	// handle A requests that have no A records
+
+	if len(record.IPv4PublicIPs) == 0 && len(record.CNames) > 0 {
+		return CNAME(name, record)
+	}
+
 	for i := 0; i < len(record.IPv4PublicIPs); i++ {
 		r := new(dns.A)
 		r.Hdr = dns.RR_Header{Name: name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: record.TTL}
@@ -106,6 +112,7 @@ func CNAME(name string, record *Record) []dns.RR {
 	var answers []dns.RR
 	for i := 0; i < len(record.CNames); i++ {
 		r := new(dns.CNAME)
+
 		r.Hdr = dns.RR_Header{Name: name, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: record.TTL}
 		r.Target = dns.Fqdn(record.CNames[i])
 		answers = append(answers, r)
