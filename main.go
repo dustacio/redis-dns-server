@@ -34,7 +34,7 @@ func main() {
 	}
 
 	if *mbox != "" {
-		log.Println("Mbox provided by no longer used", *mbox)
+		log.Println("Mbox provided but no longer used", *mbox)
 	}
 
 	if *help {
@@ -73,7 +73,7 @@ func Header() {
    \:\__\        \::/  /       \:\__\         /:/  /
     \/__/         \/__/         \/__/         \/__/
 
-     Redis DNS Server
+     Redis DNS Server Version: Strange Days 1.0.100
 `
 	log.Println(head)
 
