@@ -59,6 +59,7 @@ func main() {
 	server.listenAndServe(hostPort, "tcp")
 }
 
+// Header fancy ascii art
 func Header() {
 	head := `
      ___                         ___           ___
