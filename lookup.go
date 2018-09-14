@@ -10,8 +10,10 @@ import (
 
 // Lookup the record in Redis
 func Lookup(client redis.Client, key string) []byte {
-	log.Printf("⌘ Lookup %s\n", key)
-	byteary, err := client.Get(key)
+	downcase := strings.ToLower(key)
+	log.Printf("⌘ Lookup %s as %s\n", key, downcase)
+
+	byteary, err := client.Get(downcase)
 	log.Printf("  %s\n", string(byteary))
 	if err != nil {
 		log.Printf("Error during Lookup %s: %s\n", key, err)
@@ -20,36 +22,37 @@ func Lookup(client redis.Client, key string) []byte {
 	return byteary
 }
 
-// WildCardLookup of the record in Redis
-func WildCardLookup(client redis.Client, key string) []byte {
-	wc := wildcardHostName(key)
-	return Lookup(client, wc)
-}
-
-func wildcardHostName(hostName string) string {
-	nameParts := strings.SplitAfterN(hostName, ".", 2)
-	return "*." + nameParts[1]
+// *.key.domain or *-key.domain
+func wildcardKeys(lookupValue string) []string {
+	keys := []string{}
+	// *.key
+	nameParts := strings.SplitAfterN(lookupValue, ".", 2)
+	keys = append(keys, "*."+nameParts[1])
+	// *-key
+	keys = append(keys, "*-"+lookupValue)
+	return keys
 }
 
 // Get the record for key, apply wildcard if bare record doesn't work
 func (s *RedisDNSServer) Get(key string) *Record {
+	keys := append([]string{key}, wildcardKeys(key)...)
 	r := &Record{}
-	bAry := Lookup(s.redisClient, key)
-	if bAry == nil {
-		bAry = WildCardLookup(s.redisClient, key)
-		if bAry == nil {
+
+	for i := 0; i < len(keys); i++ {
+		bAry := Lookup(s.redisClient, keys[i])
+		if bAry != nil {
+			err := r.Parse(bAry)
+			if err != nil {
+				log.Printf("Error parsing JSON  %s: %s\n", keys[i], err)
+				return r
+			}
+			if r.TTL == 0 {
+				r.TTL = TTL
+			}
 			return r
 		}
 	}
-	err := r.Parse(bAry)
-	if err != nil {
-		log.Printf("Error parsing JSON  %s: %s\n", key, err)
-		return r
-	}
-	if r.TTL == 0 {
-		r.TTL = TTL
-	}
-	return r
+	return r // Nothing was found
 }
 
 // Parse value from Redis into Record
