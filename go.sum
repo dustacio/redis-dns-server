@@ -1,0 +1,10 @@
+github.com/elcuervo/redisurl v0.0.0-20140308042324-86d77c488bb8 h1:dHFiexLyaqYcMgsE698T1PeGyRhLg/d8Ikr8DZTnNzc=
+github.com/elcuervo/redisurl v0.0.0-20140308042324-86d77c488bb8/go.mod h1:j1patiTKl9w0QhBnOOhBdV7uFLrRhfDeQlXVMFspE4M=
+github.com/hoisie/redis v0.0.0-20160730154456-b5c6e81454e0 h1:mjZV3MTu2A5gwfT5G9IIiLGdwZNciyVq5qqnmJJZ2JI=
+github.com/hoisie/redis v0.0.0-20160730154456-b5c6e81454e0/go.mod h1:pMYMxVaKJqCDC1JUg/XbPJ4/fSazB25zORpFzqsIGIc=
+github.com/miekg/dns v1.0.8 h1:Zi8HNpze3NeRWH1PQV6O71YcvJRQ6j0lORO6DAEmAAI=
+github.com/miekg/dns v1.0.8/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
+golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b h1:2b9XGzhjiYsYPnKXoEfL7klWZQIt8IfyRCz62gCqqlQ=
+golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
+golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3 h1:czFLhve3vsQetD6JOJ8NZZvGQIXlnN3/yXxbT6/awxI=
+golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=

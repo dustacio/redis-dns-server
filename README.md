@@ -43,13 +43,12 @@ root privileges.
 
 General build steps:
 
+Download from github and build using golang 1.11
+Dependencies are automatically installed
+
 ```
 
-$ export GOPATH=/go/src/
-$ go get github.com/miekg/dns
-$ go get github.com/elcuervo/redisurl
-$ go get github.com/hoisie/redis
-$ go build -o redis-dns-server redis_dns_server.go main.go
+$ go build
 $ ./redis-dns-server --help
 
 ```

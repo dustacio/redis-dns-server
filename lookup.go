@@ -10,8 +10,10 @@ import (
 
 // Lookup the record in Redis
 func Lookup(client redis.Client, key string) []byte {
-	log.Printf("⌘ Lookup %s\n", key)
-	byteary, err := client.Get(key)
+	downcase := strings.ToLower(key)
+	log.Printf("⌘ Lookup %s as %s\n", key, downcase)
+
+	byteary, err := client.Get(downcase)
 	log.Printf("  %s\n", string(byteary))
 	if err != nil {
 		log.Printf("Error during Lookup %s: %s\n", key, err)
@@ -25,9 +27,9 @@ func wildcardKeys(lookupValue string) []string {
 	keys := []string{}
 	// *.key
 	nameParts := strings.SplitAfterN(lookupValue, ".", 2)
-	keys[0] = "*." + nameParts[1]
+	keys = append(keys, "*."+nameParts[1])
 	// *-key
-	keys[1] = "*-" + lookupValue
+	keys = append(keys, "*-"+lookupValue)
 	return keys
 }
 
