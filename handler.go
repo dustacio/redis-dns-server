@@ -10,7 +10,7 @@ func (s *RedisDNSServer) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Authoritative = true
-	m.RecursionAvailable = true
+	m.RecursionAvailable = false
 
 	for _, msg := range r.Question {
 		log.Printf("%v %s", dns.TypeToString[msg.Qtype], msg.Name)
